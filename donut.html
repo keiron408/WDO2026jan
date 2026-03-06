@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script src="plotly.min.js"></script>
+</head>
+<body>
+
+<div id="chart" style="width:900px;height:900px;"></div>
+
+<script>
+// --------------------------------------------------
+// DATA
+// --------------------------------------------------
+const contractors = [
+  { name: "Proven", inspections: 340, addresses: 242, residential: 234 },
+  { name: "Homeguard", inspections: 274, addresses: 252, residential: 236 },
+  { name: "Mightymite", inspections: 236, addresses: 176, residential: 158 },
+  { name: "Pacific Coast", inspections: 231, addresses: 163, residential: 148 },
+  { name: "Terminix", inspections: 193, addresses: 164, residential: 153 },
+  { name: "Termite Biz", inspections: 177, addresses: 156, residential: 147 },
+  { name: "Chang An", inspections: 162, addresses: 125, residential: 118 },
+  { name: "Thrasher", inspections: 156, addresses: 144, residential: 129 },
+  { name: "Planet Orange", inspections: 123, addresses: 103, residential: 91 },
+  { name: "Clark Pest", inspections: 122, addresses: 92, residential: 61 },
+  { name: "Great Wall", inspections: 114, addresses: 92, residential: 82 },
+  { name: "Able", inspections: 99, addresses: 90, residential: 82 },
+  { name: "Orkin", inspections: 98, addresses: 82, residential: 68 },
+  { name: "Horizon", inspections: 94, addresses: 72, residential: 67 },
+  { name: "Antique", inspections: 73, addresses: 63, residential: 59 },
+  { name: "Western Way", inspections: 72, addresses: 62, residential: 52 },
+  { name: "Franz", inspections: 68, addresses: 61, residential: 50 },
+  { name: "Coastal", inspections: 65, addresses: 53, residential: 39 },
+  { name: "Vanguard", inspections: 62, addresses: 49, residential: 46 },
+  { name: "Killroy", inspections: 60, addresses: 46, residential: 40 },
+  { name: "Pacific Pest", inspections: 54, addresses: 46, residential: 40 },
+  { name: "Calpro", inspections: 46, addresses: 45, residential: 36 },
+  { name: "Taps", inspections: 46, addresses: 45, residential: 42 },
+  { name: "Bay Pest", inspections: 42, addresses: 36, residential: 33 },
+  { name: "Ken Carroll", inspections: 42, addresses: 39, residential: 33 },
+  { name: "All Others", inspections: 547, addresses: 477, residential: 391 }
+];
+
+let selected = null;
+
+const baseColors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"];
+
+// --------------------------------------------------
+// CLICK HANDLER
+// --------------------------------------------------
+function attachClickHandler() {
+  const chartDiv = document.getElementById("chart");
+
+  chartDiv.on('plotly_click', function(evt) {
+
+    if (!selected) {
+      const label = evt.points[0].label;
+      const contractor = contractors.find(c => c.name === label);
+      if (!contractor) return;
+
+      selected = contractor;
+      drawDrilldown();
+      return;
+    }
+
+    selected = null;
+    drawMainDonut();
+  });
+}
+
+// --------------------------------------------------
+// MAIN DONUT
+// --------------------------------------------------
+function drawMainDonut() {
+  selected = null;
+
+  const labels = contractors.map(c => c.name);
+  const values = contractors.map(c => c.inspections);
+
+  const data = [{
+    type: "pie",
+    labels: labels,
+    values: values,
+    hole: 0.55,
+    textinfo: "label+value",
+    insidetextorientation: "radial",
+    sort: false,
+    marker: {
+      colors: baseColors,
+      line: { color: "#ffffff", width: 4 }
+    }
+  }];
+
+  const layout = {
+    title: "January 2026 WDO Inspections (Santa Clara)",
+    annotations: [{
+      text: "January 2026<br>WDO Inspections<br>(Santa Clara)",
+      showarrow: false,
+      font: { size: 20 }
+    }],
+    showlegend: false,
+    margin: { l: 0, r: 0, t: 80, b: 0 }
+  };
+
+  Plotly.newPlot("chart", data, layout).then(attachClickHandler);
+}
+
+// --------------------------------------------------
+// DRILLDOWN (INNER → OUTER ORDER)
+// --------------------------------------------------
+function drawDrilldown() {
+  const c = selected;
+  const idx = contractors.findIndex(x => x.name === c.name);
+  const color = baseColors[idx];
+
+  const labels = contractors.map(c => c.name);
+  const values = contractors.map(c => c.inspections);
+
+  const highlightColors = labels.map((name, i) =>
+    name === c.name ? baseColors[i] : "#d3d3d3"
+  );
+
+  const data = [];
+
+  // INNER RING — Residential
+  data.push({
+    type: "pie",
+    values: [c.residential],
+    labels: [`Residential: ${c.residential}`],
+    hole: 0.30,
+    textinfo: "label",
+    insidetextorientation: "tangential",
+    hovertemplate: "%{label}<extra></extra>",
+    marker: {
+      colors: [color],
+      line: { color: "#ffffff", width: 4 }
+    },
+    sort: false
+  });
+
+  // THIN SEPARATOR
+  data.push({
+    type: "pie",
+    values: [1],
+    labels: [""],
+    hole: 0.54,
+    marker: { colors: ["black"] },
+    textinfo: "none",
+    hoverinfo: "none",
+    sort: false
+  });
+
+  // MIDDLE RING — Unique Addresses
+  data.push({
+    type: "pie",
+    values: [c.addresses],
+    labels: [`Unique Addresses: ${c.addresses}`],
+    hole: 0.55,
+    textinfo: "label",
+    insidetextorientation: "tangential",
+    hovertemplate: "%{label}<extra></extra>",
+    marker: {
+      colors: [color],
+      line: { color: "#ffffff", width: 4 }
+    },
+    sort: false
+  });
+
+  // THIN SEPARATOR
+  data.push({
+    type: "pie",
+    values: [1],
+    labels: [""],
+    hole: 0.77,
+    marker: { colors: ["black"] },
+    textinfo: "none",
+    hoverinfo: "none",
+    sort: false
+  });
+
+  // OUTER RING — All contractors (SHRUNK + HIGHLIGHTED)
+  data.push({
+    type: "pie",
+    labels: labels,
+    values: values,
+    hole: 0.78,
+    textinfo: "label+value",
+    insidetextorientation: "radial",
+    sort: false,
+    marker: {
+      colors: highlightColors,
+      line: { color: "#ffffff", width: 4 }
+    }
+  });
+
+  const layout = {
+    title: c.name,
+    annotations: [{
+      text: "January 2026<br>WDO Inspections<br>(Santa Clara)",
+      showarrow: false,
+      font: { size: 20 }
+    }],
+    showlegend: false,
+    margin: { l: 0, r: 0, t: 80, b: 0 }
+  };
+
+  Plotly.newPlot("chart", data, layout).then(attachClickHandler);
+}
+
+// --------------------------------------------------
+// INIT
+// --------------------------------------------------
+drawMainDonut();
+</script>
+
+</body>
+</html>
